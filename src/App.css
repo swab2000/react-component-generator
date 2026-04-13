@@ -26,6 +26,29 @@
   font-size: 0.9rem;
 }
 
+.header-right {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.provider-select label {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+}
+
+.provider-select select {
+  padding: 0.5rem 0.75rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .api-key-input label {
   display: block;
   font-size: 0.8rem;

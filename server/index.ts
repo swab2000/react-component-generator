@@ -47,8 +47,78 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+type Provider = 'anthropic' | 'google';
+
+async function callAnthropic(prompt: string, apiKey: string): Promise<string> {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Claude API error: ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    content: Array<{ type: string; text?: string }>;
+  };
+
+  return data.content
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('');
+}
+
+async function callGoogle(prompt: string, apiKey: string): Promise<string> {
+  const model = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 4096 },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    candidates: Array<{
+      content: { parts: Array<{ text?: string }> };
+    }>;
+  };
+
+  return (
+    data.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text)
+      ?.join('') ?? ''
+  );
+}
+
+function stripCodeFences(text: string): string {
+  return text
+    .replace(/^```(?:jsx|tsx|javascript|typescript)?\n?/gm, '')
+    .replace(/```$/gm, '')
+    .trim();
+}
+
 const server = Bun.serve({
-  port: 3001,
+  port: 3002,
   async fetch(req) {
     if (req.method === 'OPTIONS') {
       return new Response(null, { headers: CORS_HEADERS });
@@ -58,9 +128,10 @@ const server = Bun.serve({
 
     if (req.method === 'POST' && url.pathname === '/api/generate') {
       try {
-        const { prompt, apiKey } = (await req.json()) as {
+        const { prompt, apiKey, provider = 'anthropic' } = (await req.json()) as {
           prompt: string;
           apiKey: string;
+          provider?: Provider;
         };
 
         if (!apiKey) {
@@ -77,42 +148,12 @@ const server = Bun.serve({
           );
         }
 
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
-            system: SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: prompt }],
-          }),
-        });
+        const text =
+          provider === 'google'
+            ? await callGoogle(prompt, apiKey)
+            : await callAnthropic(prompt, apiKey);
 
-        if (!response.ok) {
-          const error = await response.text();
-          return Response.json(
-            { error: `Claude API error: ${response.status}` },
-            { status: response.status, headers: CORS_HEADERS }
-          );
-        }
-
-        const data = (await response.json()) as {
-          content: Array<{ type: string; text?: string }>;
-        };
-        const text = data.content
-          .filter((block) => block.type === 'text')
-          .map((block) => block.text)
-          .join('');
-
-        // Strip markdown code fences if present
-        const code = text
-          .replace(/^```(?:jsx|tsx|javascript|typescript)?\n?/gm, '')
-          .replace(/```$/gm, '')
-          .trim();
+        const code = stripCodeFences(text);
 
         return Response.json({ code }, { headers: CORS_HEADERS });
       } catch (err) {

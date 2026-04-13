@@ -2,20 +2,32 @@ import { useState } from 'react';
 import { PromptInput } from './components/PromptInput';
 import { ComponentCard } from './components/ComponentCard';
 import { useComponentGenerator } from './hooks/useComponentGenerator';
+import type { Provider } from './types';
 import './App.css';
+
+const PROVIDER_CONFIG = {
+  anthropic: { label: 'Anthropic', placeholder: 'sk-ant-...' },
+  google: { label: 'Google', placeholder: 'AIza...' },
+} as const;
 
 function App() {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
+  const [provider, setProvider] = useState<Provider>('anthropic');
   const { components, isLoading, error, generate, removeComponent, clearAll } =
     useComponentGenerator();
 
   const handleGenerate = (prompt: string) => {
     if (!apiKey.trim()) {
-      alert('Anthropic API 키를 먼저 입력해주세요.');
+      alert(`${PROVIDER_CONFIG[provider].label} API 키를 먼저 입력해주세요.`);
       return;
     }
-    generate(prompt, apiKey);
+    generate(prompt, apiKey, provider);
+  };
+
+  const handleProviderChange = (newProvider: Provider) => {
+    setProvider(newProvider);
+    setApiKey('');
   };
 
   return (
@@ -26,6 +38,20 @@ function App() {
           <p>컴포넌트를 설명하면 AI가 즉시 만들어드립니다</p>
         </div>
         <div className="header-right">
+          <div className="provider-select">
+            <label htmlFor="provider">Provider</label>
+            <select
+              id="provider"
+              value={provider}
+              onChange={(e) => handleProviderChange(e.target.value as Provider)}
+            >
+              {Object.entries(PROVIDER_CONFIG).map(([key, { label }]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="api-key-input">
             <label htmlFor="api-key">API Key</label>
             <div className="api-key-field">
@@ -34,7 +60,7 @@ function App() {
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-ant-..."
+                placeholder={PROVIDER_CONFIG[provider].placeholder}
               />
               <button
                 className="btn-toggle-key"

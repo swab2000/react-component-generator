@@ -1,0 +1,29 @@
+{
+  "skill_name": "commit-helper",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "src/components 폴더에 새로운 Modal 컴포넌트를 추가했어. 커밋해줘.",
+      "expected_output": "feat(components): Modal 컴포넌트 추가 라는 형태의 커밋 메시지 제안 및 사용자 승인 후 커밋 수행",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "App.tsx의 버그를 수정했는데, 상태 관리 로직에서 race condition이 있던 문제를 해결했어. 이것 커밋 가능할까?",
+      "expected_output": "fix: 상태 관리 race condition 수정 형태의 메시지로, 왜(why)를 포함한 본문과 함께 커밋 메시지 제안",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "App.css와 index.css의 색상 팔레트를 리팩토링했고, 새로운 CSS 변수 시스템을 적용했어. 변경사항 저장해줘.",
+      "expected_output": "design 또는 refactor 타입으로 분류되며, 여러 스타일 파일의 변경을 한 커밋 또는 여러 커밋으로 나눌 것을 제안",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "package.json에 새 라이브러리를 추가했고, .prettierrc 설정을 업데이트했어. 그리고 README에 설치 방법을 추가했어. 전부 커밋해야 하는데...",
+      "expected_output": "chore, chore, docs 타입으로 분류되며 각각 또는 합치기를 제안, 사용자 선택 후 커밋",
+      "files": []
+    }
+  ]
+}

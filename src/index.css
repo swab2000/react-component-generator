@@ -4,9 +4,43 @@
   box-sizing: border-box;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Syne+Mono&family=Poppins:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+
+:root {
+  --retro-cream: #FFF8F0;
+  --retro-terracotta: #C64935;
+  --retro-brown: #5D3B25;
+  --retro-gold: #D4A574;
+  --retro-dark: #3B2F2A;
+  --retro-light-brown: #8B7355;
+  --retro-accent: #E8936F;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #FFF8F0 0%, #FCF3EB 100%);
+  background-attachment: fixed;
+  color: #3B2F2A;
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.015),
+      rgba(0, 0, 0, 0.015) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  pointer-events: none;
+  z-index: 1;
 }

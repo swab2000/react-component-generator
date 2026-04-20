@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatCharacterCount, handleExampleSelection, isValidPrompt } from './promptHelper';
 
 interface PromptInputProps {
   onGenerate: (prompt: string) => void;
@@ -19,34 +20,38 @@ export function PromptInput({ onGenerate, isLoading }: PromptInputProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (prompt.trim() && !isLoading) {
+    if (isValidPrompt(prompt) && !isLoading) {
       onGenerate(prompt.trim());
     }
   };
 
   const handleExampleClick = (example: string) => {
-    setPrompt(example);
+    const selectedExample = handleExampleSelection(example);
+    setPrompt(selectedExample);
   };
 
   return (
     <div className="prompt-section">
       <form onSubmit={handleSubmit} className="prompt-form">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="만들고 싶은 컴포넌트를 설명해주세요..."
-          className="prompt-textarea"
-          rows={3}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              handleSubmit(e);
-            }
-          }}
-        />
+        <div className="prompt-input-wrapper">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="만들고 싶은 컴포넌트를 설명해주세요..."
+            className="prompt-textarea"
+            rows={3}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                handleSubmit(e);
+              }
+            }}
+          />
+          <div className="prompt-char-count">{formatCharacterCount(prompt.length)}</div>
+        </div>
         <button
           type="submit"
           className="btn-generate"
-          disabled={!prompt.trim() || isLoading}
+          disabled={!isValidPrompt(prompt) || isLoading}
         >
           {isLoading ? (
             <span className="loading-spinner">생성 중...</span>

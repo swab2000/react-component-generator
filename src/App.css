@@ -203,7 +203,6 @@
 }
 
 .prompt-textarea {
-  flex: 1;
   padding: 1rem;
   background: var(--retro-cream);
   border: 3px solid var(--retro-brown);

@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8'));const b=require('path').basename((d.tool_input||{}).file_path||'').toLowerCase();if(b==='.env'||b.startsWith('.env.')){console.log(JSON.stringify({decision:'block',reason:'.env files are blocked to protect sensitive credentials.'}));process.exit(2);}\"",
+            "statusMessage": ".env 파일 접근 차단 확인 중..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "if": "Bash(git commit *)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run lint",
+            "statusMessage": "커밋 전 린트 검사 중...",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c '[[ -f .claude/hooks/check-test.sh ]] && bash .claude/hooks/check-test.sh || true'",
+            "statusMessage": "테스트 파일 확인 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

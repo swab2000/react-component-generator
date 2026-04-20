@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { GeneratedComponent } from '../types';
 import { LivePreview } from './LivePreview';
 import { CodeView } from './CodeView';
@@ -14,9 +14,21 @@ interface ComponentCardProps {
 type Tab = 'preview' | 'code';
 
 export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: ComponentCardProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('preview');
+  const isStreaming = component.isStreaming ?? false;
+  const [activeTab, setActiveTab] = useState<Tab>('code');
   const [previewKey, setPreviewKey] = useState(0);
   const { viewportSize, setViewportSize, width } = useViewportSize();
+  const prevIsStreaming = useRef(isStreaming);
+
+  // 스트리밍 완료 시 preview 탭으로 자동 전환
+  useEffect(() => {
+    if (prevIsStreaming.current && !isStreaming && component.code) {
+      setActiveTab('preview');
+    }
+    prevIsStreaming.current = isStreaming;
+  }, [isStreaming, component.code]);
+
+  const displayCode = isStreaming ? (component.streamingCode ?? '') : component.code;
 
   return (
     <div className="component-card">
@@ -27,13 +39,14 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
             className="btn-refresh"
             onClick={() => setPreviewKey((k) => k + 1)}
             title="미리보기 새로고침"
+            disabled={isStreaming}
           >
             ↻
           </button>
           <button
             className="btn-regenerate"
             onClick={() => onRegenerate(component.prompt)}
-            disabled={isLoading}
+            disabled={isLoading || isStreaming}
           >
             {isLoading ? '생성 중...' : '재생성'}
           </button>
@@ -50,6 +63,7 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
           <button
             className={`tab ${activeTab === 'preview' ? 'tab--active' : ''}`}
             onClick={() => setActiveTab('preview')}
+            disabled={isStreaming}
           >
             미리보기
           </button>
@@ -60,7 +74,7 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
             코드
           </button>
         </div>
-        {activeTab === 'preview' && (
+        {activeTab === 'preview' && !isStreaming && (
           <div className="viewport-controls">
             {(['mobile', 'tablet', 'desktop'] as const).map((size) => (
               <button
@@ -79,10 +93,10 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
       <div className="card-content">
         {activeTab === 'preview' ? (
           <div className="preview-viewport-wrapper" style={{ maxWidth: width }}>
-            <LivePreview key={previewKey} code={component.code} />
+            <LivePreview key={previewKey} code={component.code} isStreaming={isStreaming} />
           </div>
         ) : (
-          <CodeView code={component.code} />
+          <CodeView code={displayCode} isStreaming={isStreaming} />
         )}
       </div>
     </div>

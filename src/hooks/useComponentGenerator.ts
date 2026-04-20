@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { GeneratedComponent, Provider } from '../types';
+import { parseSSEEvent } from '../utils/sseParser';
 
 interface UseComponentGeneratorReturn {
   components: GeneratedComponent[];
@@ -19,6 +20,20 @@ export function useComponentGenerator(): UseComponentGeneratorReturn {
     setIsLoading(true);
     setError(null);
 
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    setComponents((prev) => [
+      {
+        id,
+        prompt,
+        code: '',
+        streamingCode: '',
+        isStreaming: true,
+        createdAt: new Date(),
+      },
+      ...prev,
+    ]);
+
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -26,21 +41,58 @@ export function useComponentGenerator(): UseComponentGeneratorReturn {
         body: JSON.stringify({ prompt, ...(apiKey && { apiKey }), provider }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
+        const data = await res.json();
         throw new Error(data.error || 'Failed to generate component');
       }
 
-      const newComponent: GeneratedComponent = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        prompt,
-        code: data.code,
-        createdAt: new Date(),
-      };
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-      setComponents((prev) => [newComponent, ...prev]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        const eventBlocks = buffer.split('\n\n');
+        buffer = eventBlocks.pop() ?? '';
+
+        for (const block of eventBlocks) {
+          if (!block.trim()) continue;
+
+          const lines = block.split('\n');
+          const event = parseSSEEvent(lines);
+
+          if (event?.eventType === 'chunk') {
+            setComponents((prev) =>
+              prev.map((c) =>
+                c.id === id
+                  ? { ...c, streamingCode: (c.streamingCode ?? '') + event.text }
+                  : c
+              )
+            );
+          } else if (event?.eventType === 'complete') {
+            setComponents((prev) =>
+              prev.map((c) =>
+                c.id === id
+                  ? { ...c, code: event.processedCode, streamingCode: undefined, isStreaming: false }
+                  : c
+              )
+            );
+            setIsLoading(false);
+            return;
+          } else if (event?.eventType === 'error') {
+            setComponents((prev) => prev.filter((c) => c.id !== id));
+            setError(event.error);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
     } catch (err) {
+      setComponents((prev) => prev.filter((c) => c.id !== id));
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
     } finally {
